@@ -343,7 +343,6 @@ export function Hero3() {
       <style>{CSS}</style>
 
       <HeroPanel isFirst />
-      <HeroPanel />
       <HeroPanel bare />
     </>
   )
