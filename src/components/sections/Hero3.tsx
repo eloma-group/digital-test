@@ -32,14 +32,21 @@ function useDeferredMount() {
       const ric = (window as typeof window & {
         requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
       }).requestIdleCallback
-      if (ric) idle = ric(() => setReady(true), { timeout: 2500 })
-      else timer = setTimeout(() => setReady(true), 1500)
+      // Short idle timeout so the robot streams in promptly after first paint.
+      if (ric) idle = ric(() => setReady(true), { timeout: 800 })
+      else timer = setTimeout(() => setReady(true), 400)
     }
-    // Wait for the initial load to settle before kicking off the idle wait.
-    if (document.readyState === 'complete') start()
-    else { window.addEventListener('load', start, { once: true }) }
+    // Kick off as soon as the DOM is parsed - NOT window.load. The hero videos
+    // are multi-MB, and waiting on `load` would hold the robot back until every
+    // resource (videos included) finished downloading. DOMContentLoaded lets the
+    // robot start streaming right after first paint instead.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start, { once: true })
+    } else {
+      start()
+    }
     return () => {
-      window.removeEventListener('load', start)
+      document.removeEventListener('DOMContentLoaded', start)
       const cic = (window as typeof window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback
       if (idle !== undefined && cic) cic(idle)
       if (timer) clearTimeout(timer)
@@ -293,11 +300,12 @@ function HeroPanel({ isFirst, bare }: { isFirst?: boolean; bare?: boolean }) {
         <video
           className="h3-bg-video"
           src={bare ? '/Old to new.mp4' : '/Digital Design.mp4'}
+          poster={bare ? '/old-to-new-poster.jpg' : '/digital-design-poster.jpg'}
           autoPlay
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           aria-hidden="true"
         />
       )}
